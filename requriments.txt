@@ -1,3 +1,5 @@
 tkinter
 pystray
 PIL
+win32event 
+win32api

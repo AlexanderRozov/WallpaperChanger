@@ -1,9 +1,6 @@
 import os
 import ctypes
-import tkinter as tk
-from tkinter import filedialog, messagebox
-import pystray
-from PIL import Image
+import pywin
 
 def set_wallpaper(image_path):
     """Set the wallpaper to the specified image path."""
@@ -13,8 +10,9 @@ def set_wallpaper(image_path):
 def load_images_from_directory(directory):
     """Load images from a directory and return their paths."""
     valid_extensions = ['.jpg', '.jpeg', '.png', '.bmp']
-    images = [os.path.join(directory, f) for f in os.listdir(directory) if os.path.isfile(os.path.join(directory,
-f)) and os.path.splitext(f)[1].lower() in valid_extensions]
+    images = [os.path.join(directory, f) for f in os.listdir(directory) if
+os.path.isfile(os.path.join(directory, f)) and os.path.splitext(f)[1].lower() in
+valid_extensions]
     return images
 
 def next_wallpaper():
@@ -33,7 +31,14 @@ def previous_wallpaper():
 
 def choose_directory():
     """Choose a directory and load images from it."""
+    import tkinter as tk
+    from tkinter import filedialog
+
+    root = tk.Tk()
+    root.withdraw()  # Hide the main window
     directory = filedialog.askdirectory()
+    root.destroy()
+
     if directory:
         global images, current_image_index
         images = load_images_from_directory(directory)
@@ -51,52 +56,74 @@ def update_label():
 
 def create_tray_icon():
     """Create a system tray icon with options to change wallpapers."""
+    import pystray
+    from PIL import Image, ImageDraw
+
+    # Create an icon image (24x24 pixels)
+    image = Image.new('RGBA', (24, 24), "black")
+    draw = ImageDraw.Draw(image)
+    draw.ellipse((0, 0, 23, 23), fill="white", outline="gray")
+
     def on_quit(icon, item):
         icon.stop()
         root.destroy()
 
-    menu = (pystray.MenuItem('Next Wallpaper', lambda: next_wallpaper()),
-            pystray.MenuItem('Previous Wallpaper', lambda: previous_wallpaper()),
-            pystray.MenuItem('Exit', on_quit))
+    menu = (
+        pystray.MenuItem('Next Wallpaper', lambda: next_wallpaper()),
+        pystray.MenuItem('Previous Wallpaper', lambda: previous_wallpaper()),
+        pystray.MenuItem('Exit', on_quit),
+    )
 
-    image = Image.open("TrayIcon.png")  # Replace with your icon path
-    icon = pystray.Icon("Wallpaper Changer", image, "Wallpaper Changer", menu)
-    return icon
+    return pystray.Icon("Wallpaper Changer", image, "Wallpaper Changer", menu)
 
-# Main application setup
-root = tk.Tk()
-root.title("Wallpaper Changer")
-root.geometry("300x200")
+if __name__ == "__main__":
+    # Create or open a named mutex
+    import win32event
+    mutex_name = "WallpaperChangerMutex"
+    mutex = win32event.CreateMutex(None, True, mutex_name)
+    if win32api.GetLastError() == win32con.ERROR_ALREADY_EXISTS:
+        messagebox.showerror("Error", "Another instance of this application is already running.")
+        exit()
 
-frame = tk.Frame(root)
-frame.pack(pady=20)
+    import tkinter as tk
+    from tkinter import messagebox
 
-label = tk.Label(frame, text="No image selected", font=('Helvetica', 14))
-label.pack(pady=10)
+    # Main application setup
+    root = tk.Tk()
+    root.title("Wallpaper Changer")
+    root.geometry("300x200")
 
-choose_button = tk.Button(frame, text="Choose Directory", command=choose_directory)
-choose_button.pack()
+    frame = tk.Frame(root)
+    frame.pack(pady=20)
 
-next_button = tk.Button(frame, text="Next Wallpaper", command=next_wallpaper)
-next_button.pack(side=tk.LEFT, padx=5)
+    global label, images, current_image_index
+    label = tk.Label(frame, text="No image selected", font=('Helvetica', 14))
+    label.pack(pady=10)
 
-prev_button = tk.Button(frame, text="Previous Wallpaper", command=previous_wallpaper)
-prev_button.pack(side=tk.RIGHT, padx=5)
+    choose_button = tk.Button(frame, text="Choose Directory", command=choose_directory)
+    choose_button.pack()
 
-about_button = tk.Button(frame, text="About", command=lambda: messagebox.showinfo("About", "Wallpaper Changer by Alexander Rozov\nVersion 1.0"))
-about_button.pack(pady=10)
+    next_button = tk.Button(frame, text="Next Wallpaper", command=next_wallpaper)
+    next_button.pack(side=tk.LEFT, padx=5)
 
-images = []
-current_image_index = 0
+    prev_button = tk.Button(frame, text="Previous Wallpaper", command=previous_wallpaper)
+    prev_button.pack(side=tk.RIGHT, padx=5)
 
-# Create tray icon
-tray_icon = create_tray_icon()
+    about_button = tk.Button(frame, text="About", command=lambda: messagebox.showinfo("About",
+"Wallpaper Changer by Alexander Rozov\nVersion 1.0"))
+    about_button.pack(pady=10)
 
-def on_closing():
-    """Handle the window close event."""
-    root.withdraw()
-    tray_icon.run_detached()
+    images = []
+    current_image_index = 0
 
-root.protocol("WM_DELETE_WINDOW", on_closing)
+    # Create tray icon
+    tray_icon = create_tray_icon()
 
-root.mainloop()
+    def on_closing():
+        """Handle the window close event."""
+        root.withdraw()
+        tray_icon.run_detached()
+
+    root.protocol("WM_DELETE_WINDOW", on_closing)
+
+    root.mainloop()
