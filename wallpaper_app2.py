@@ -18,7 +18,7 @@ class WallpaperSelectorWindow(Gtk.ApplicationWindow):
         self.set_title("Wallpaper Selector")
         self.set_default_size(800, 600)
 
-        # Основной контейнер
+        # Main container
         self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.add(self.box)
 
